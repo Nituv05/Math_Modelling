@@ -1,4 +1,4 @@
-# Math_Modelling — Basics of Modelling the Pedestrian Flow
+# Math Modelling Project — Basics of Modelling the Pedestrian Flow
 
 A complete Python reproduction of
 
