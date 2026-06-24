@@ -16,7 +16,9 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pedestrian import (ModelParameters, HardBodyModel, RemoteActionModel,
-                        front_gaps, initialise, run_single)
+                        front_gaps, initialise, run_single,
+                        empirical_velocity_from_required_length,
+                        load_empirical_reference, rmse_against_empirical)
 
 
 def test_required_length():
@@ -25,6 +27,18 @@ def test_required_length():
     assert np.isclose(p.required_length(np.array([1.0]))[0], 0.36 + 0.56)
     # negative velocity clamped -> never below a
     assert np.isclose(p.required_length(np.array([-5.0]))[0], 0.36)
+
+
+def test_empirical_reference_curve():
+    rho = np.array([1.0, 2.0])
+    expected = np.array([(1.0 - 0.36) / 1.06, (0.5 - 0.36) / 1.06])
+    assert np.allclose(empirical_velocity_from_required_length(rho), expected)
+    assert rmse_against_empirical(rho, expected) == 0.0
+
+    points = load_empirical_reference()
+    assert len(points) > 10
+    assert points[0].density < points[-1].density
+    assert points[0].velocity > points[-1].velocity
 
 
 def test_front_gaps_sum_to_L():
@@ -76,6 +90,19 @@ def test_remote_velocity_nonnegative_and_bounded():
         assert np.all(m.v >= 0.0)
         # speed should not exceed intended speed by much
         assert m.v.max() <= m.v0.max() + 0.1
+
+
+def test_remote_action_step_uses_explicit_euler_position_update():
+    """If old velocity is zero, one explicit Euler step must not move x."""
+    p = ModelParameters(a=0.36, b=0.56, e=0.07, f=2.0)
+    m = RemoteActionModel(n=2, L=50.0, params=p, seed=4)
+    m.x = np.array([0.0, 20.0])
+    m.v = np.array([0.0, 0.0])
+    m.v0 = np.array([1.2, 1.2])
+    x_old = m.x.copy()
+    m.step()
+    assert np.allclose(m.x, x_old)
+    assert np.all(m.v > 0.0)
 
 
 def test_low_density_reaches_free_speed():

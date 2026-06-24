@@ -31,7 +31,7 @@ paper, so forces and accelerations coincide.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import numpy as np
 
 
@@ -58,6 +58,7 @@ class ModelParameters:
     v0_sigma: float = 0.05   # [m/s] std of intended speed
     e: float = 0.07          # [N]  remote-force strength, Eq. (6)
     f: float = 2.0           # [-]  remote-force range exponent, Eq. (6)
+    clear_distance_floor: float = 1e-6  # [m] numerical guard for Eq. (6)
 
     def required_length(self, v: np.ndarray) -> np.ndarray:
         """Required length ``d_i = a + b * v_i`` (Eq. 4 / 5 / 6).
@@ -206,7 +207,7 @@ class RemoteActionModel:
         gaps = front_gaps(self.x, self.L)
         # Effective clear distance; floored to a tiny epsilon so the strong
         # repulsion stays finite if a pair gets numerically too close.
-        clear = np.maximum(gaps - d, 1e-6)
+        clear = np.maximum(gaps - d, p.clear_distance_floor)
         drive = (self.v0 - self.v) / p.tau
         repel = p.e * (1.0 / clear) ** p.f
         G = drive - repel
@@ -215,9 +216,11 @@ class RemoteActionModel:
 
     def step(self) -> None:
         dt, L = self.dt, self.L
+        x_old = self.x.copy()
+        v_old = self.v.copy()
         F = self._force()
         self.v = np.maximum(self.v + dt * F, 0.0)   # no backward velocity
-        self.x = np.mod(self.x + dt * self.v, L)
+        self.x = np.mod(x_old + dt * v_old, L)
         # Maintain sorted order (ordering can in principle change if a fast
         # pedestrian overtakes, which the model should prevent, but we keep
         # the invariant defensively for the gap computation).

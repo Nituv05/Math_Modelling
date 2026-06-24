@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 
 from _common import add_common_args, resolve_steps, FIG_DIR
 from pedestrian import (ModelParameters, HardBodyModel, RemoteActionModel,
-                        fundamental_diagram)
+                        fundamental_diagram, load_empirical_reference)
 
 
 def main() -> None:
@@ -37,6 +37,15 @@ def main() -> None:
 
     densities = np.linspace(0.2, 2.9, 25)
     fig, ax = plt.subplots(figsize=(7, 5))
+    empirical = load_empirical_reference()
+    ax.plot(
+        [p.density for p in empirical],
+        [p.velocity for p in empirical],
+        "-",
+        color="black",
+        linewidth=1.5,
+        label="empirical regression",
+    )
 
     cases = [
         ("without remote action, b=0.56", HardBodyModel,

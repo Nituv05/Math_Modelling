@@ -17,6 +17,15 @@ from .model import (
 )
 from .simulation import run_single, RunResult, PAPER_RELAX_STEPS, PAPER_MEASURE_STEPS
 from .fundamental_diagram import fundamental_diagram, densities_to_counts
+from .empirical import (
+    EmpiricalPoint,
+    EMPIRICAL_A,
+    EMPIRICAL_B,
+    EMPIRICAL_REFERENCE_CSV,
+    empirical_velocity_from_required_length,
+    load_empirical_reference,
+    rmse_against_empirical,
+)
 
 __all__ = [
     "ModelParameters",
@@ -30,4 +39,11 @@ __all__ = [
     "PAPER_MEASURE_STEPS",
     "fundamental_diagram",
     "densities_to_counts",
+    "EmpiricalPoint",
+    "EMPIRICAL_A",
+    "EMPIRICAL_B",
+    "EMPIRICAL_REFERENCE_CSV",
+    "empirical_velocity_from_required_length",
+    "load_empirical_reference",
+    "rmse_against_empirical",
 ]
