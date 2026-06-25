@@ -1,13 +1,8 @@
-"""Empirical-reference helpers for the single-file fundamental diagram.
+"""Empirical-data helpers for the single-file fundamental diagram.
 
-The modelling paper compares its curves against the single-file experiments
-reported in Seyfried et al., "The Fundamental Diagram of Pedestrian Movement
-Revisited" (arXiv:physics/0506170).  That paper reports the linear relation
-
-    1 / rho = 0.36 m + 1.06 s * v
-
-between inverse density and velocity.  The bundled CSV stores the curve
-generated from that regression, not the raw experimental observations.
+The modelling paper overlays measured single-file data points in Fig. 1.
+Those points are not a fitted curve.  The bundled CSV stores the marker
+locations digitized from the paper's Fig. 1 EPS source.
 """
 
 from __future__ import annotations
@@ -16,42 +11,27 @@ from dataclasses import dataclass
 from pathlib import Path
 import csv
 
-import numpy as np
-
-
-EMPIRICAL_A = 0.36
-EMPIRICAL_B = 1.06
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-EMPIRICAL_REFERENCE_CSV = DATA_DIR / "empirical_single_file_regression.csv"
+EMPIRICAL_POINTS_CSV = DATA_DIR / "empirical_single_file_points.csv"
+EMPIRICAL_SOURCE = "Seyfried, Steffen, Lippert 2005 arXiv:physics/0506189 Fig. 1"
+EMPIRICAL_NOTES = (
+    "Digitized from Fig. 1 EPS markers; the paper shows data points, "
+    "not an empirical fitted curve."
+)
 
 
 @dataclass(frozen=True)
 class EmpiricalPoint:
     density: float
     velocity: float
-    inverse_density: float
-    source: str
-    notes: str
+
+    @property
+    def inverse_density(self) -> float:
+        return 1.0 / self.density
 
 
-def empirical_velocity_from_required_length(
-    density: np.ndarray | float,
-    a: float = EMPIRICAL_A,
-    b: float = EMPIRICAL_B,
-) -> np.ndarray:
-    """Return the regression reference velocity at density ``rho``.
-
-    Rearranges ``1 / rho = a + b * v`` to ``v = (1 / rho - a) / b`` and
-    clips negative velocities to zero.
-    """
-    rho = np.asarray(density, dtype=float)
-    if np.any(rho <= 0.0):
-        raise ValueError("density must be positive")
-    return np.maximum((1.0 / rho - a) / b, 0.0)
-
-
-def load_empirical_reference(path: Path = EMPIRICAL_REFERENCE_CSV) -> list[EmpiricalPoint]:
-    """Load the bundled regression reference points."""
+def load_empirical_points(path: Path = EMPIRICAL_POINTS_CSV) -> list[EmpiricalPoint]:
+    """Load the bundled empirical data points."""
     points: list[EmpiricalPoint] = []
     with path.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -60,19 +40,49 @@ def load_empirical_reference(path: Path = EMPIRICAL_REFERENCE_CSV) -> list[Empir
                 EmpiricalPoint(
                     density=float(row["density_1_per_m"]),
                     velocity=float(row["velocity_m_per_s"]),
-                    inverse_density=float(row["inverse_density_m"]),
-                    source=row["source"],
-                    notes=row["notes"],
                 )
             )
     return points
 
+def empirical_mean_velocity_near_density(
+    densities,
+    half_width: float = 0.075,
+    points: list[EmpiricalPoint] | None = None,
+):
+    """Mean empirical velocity in a density window around each density.
 
-def rmse_against_empirical(densities, velocities) -> float:
-    """Root-mean-square error against the regression reference curve."""
+    Returns ``nan`` where the digitized data contain no point in the window.
+    """
+    import numpy as np
+
+    rho = np.asarray(densities, dtype=float)
+    if np.any(rho <= 0.0):
+        raise ValueError("density must be positive")
+    if half_width <= 0.0:
+        raise ValueError("half_width must be positive")
+
+    empirical = points if points is not None else load_empirical_points()
+    empirical_rho = np.array([p.density for p in empirical], dtype=float)
+    empirical_v = np.array([p.velocity for p in empirical], dtype=float)
+
+    means = np.full(rho.shape, np.nan, dtype=float)
+    for idx, density in np.ndenumerate(rho):
+        mask = np.abs(empirical_rho - density) <= half_width
+        if mask.any():
+            means[idx] = float(np.mean(empirical_v[mask]))
+    return means
+
+
+def rmse_against_empirical(densities, velocities, half_width: float = 0.075) -> float:
+    """Root-mean-square error against nearby empirical data points."""
+    import numpy as np
+
     rho = np.asarray(densities, dtype=float)
     v = np.asarray(velocities, dtype=float)
     if rho.shape != v.shape:
         raise ValueError("densities and velocities must have the same shape")
-    ref = empirical_velocity_from_required_length(rho)
-    return float(np.sqrt(np.mean((v - ref) ** 2)))
+    ref = empirical_mean_velocity_near_density(rho, half_width=half_width)
+    valid = ~np.isnan(ref)
+    if not valid.any():
+        raise ValueError("no empirical data points found near the supplied densities")
+    return float(np.sqrt(np.mean((v[valid] - ref[valid]) ** 2)))

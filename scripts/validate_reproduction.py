@@ -20,7 +20,7 @@ from pedestrian import (
     HardBodyModel,
     RemoteActionModel,
     fundamental_diagram,
-    empirical_velocity_from_required_length,
+    empirical_mean_velocity_near_density,
     rmse_against_empirical,
     run_single,
 )
@@ -33,7 +33,7 @@ def _results_to_arrays(results):
 
 
 def empirical_overlay_check(relax_steps, measure_steps, seed, L):
-    densities = np.array([0.6, 0.9, 1.2, 1.5, 1.8, 2.1, 2.4])
+    densities = np.array([0.6, 0.9, 1.2, 1.5, 1.8, 2.0])
     params = ModelParameters(a=0.36, b=0.56)
     results = fundamental_diagram(
         HardBodyModel,
@@ -46,9 +46,9 @@ def empirical_overlay_check(relax_steps, measure_steps, seed, L):
         progress=False,
     )
     rho, velocity = _results_to_arrays(results)
-    reference = empirical_velocity_from_required_length(rho)
+    reference = empirical_mean_velocity_near_density(rho)
     return {
-        "name": "empirical_reference_rmse",
+        "name": "empirical_data_point_rmse",
         "model": "HardBodyModel(b=0.56)",
         "L": L,
         "rmse_m_per_s": rmse_against_empirical(rho, velocity),
@@ -56,10 +56,11 @@ def empirical_overlay_check(relax_steps, measure_steps, seed, L):
             {
                 "density": float(r),
                 "simulation_velocity": float(v),
-                "empirical_reference_velocity": float(ref),
+                "nearby_empirical_mean_velocity": float(ref),
                 "delta": float(v - ref),
             }
             for r, v, ref in zip(rho, velocity, reference)
+            if not np.isnan(ref)
         ],
     }
 

@@ -81,14 +81,14 @@ Math_Modelling/
 │   ├── model.py                # HardBodyModel, RemoteActionModel, parameters
 │   ├── simulation.py           # run one simulation, measure mean velocity
 │   ├── fundamental_diagram.py  # sweep density -> v(ρ)
-│   └── empirical.py            # empirical regression reference helpers
+│   └── empirical.py            # empirical data-point helpers
 ├── scripts/
 │   ├── run_figure1.py          # Fig. 1: hard bodies, b = 0 / 0.56 / 1.06
 │   ├── run_figure2.py          # Fig. 2: remote action vs. hard bodies
 │   ├── run_figure3.py          # Fig. 3: space-time density waves
 │   └── validate_reproduction.py # quantitative validation diagnostics
 ├── data/
-│   └── empirical_single_file_regression.csv
+│   └── empirical_single_file_points.csv
 ├── demo.py                     # quick no-plot demo
 ├── tests/test_model.py         # invariants & qualitative checks (pytest)
 ├── figures/                    # generated PNGs
@@ -117,7 +117,7 @@ python scripts/run_figure1.py --preset paper --no-show
 # Run the quick no-plot demo (needs numpy only)
 python demo.py
 
-# Run quantitative diagnostics against the empirical regression,
+# Run quantitative diagnostics against nearby empirical data points,
 # finite-size checks, remote-action velocity gap, and force-floor sensitivity
 python scripts/validate_reproduction.py --preset quick
 python scripts/validate_reproduction.py --preset paper --json
@@ -163,10 +163,9 @@ for r in results:
 * The hard-body update (Eq. 5) uses iterative relaxation of the rejected
   moves, which is the "approximation to the exact parallel update" the
   authors describe in Section II C.
-* The empirical overlay is a regression reference derived from the related
-  single-file paper (`1/ρ = 0.36 m + 1.06 s · v`), not raw experimental
-  observations. It is suitable for visual comparison and RMSE diagnostics,
-  but not for re-estimating experimental uncertainty.
+* The empirical overlay is a set of data points digitized from the Fig. 1 EPS
+  source. The paper does not plot an empirical fitted curve in Figs. 1-3;
+  Eq. 4 is the required-length relation used for the model parameter `d`.
 * `RemoteActionModel` uses explicit Euler consistently: force is evaluated
   at the old state, velocity is advanced, and position is advanced with the
   old velocity.

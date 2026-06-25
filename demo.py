@@ -19,7 +19,7 @@ from pedestrian import (
     HardBodyModel,
     RemoteActionModel,
     fundamental_diagram,
-    empirical_velocity_from_required_length,
+    empirical_mean_velocity_near_density,
     rmse_against_empirical,
 )
 
@@ -37,13 +37,14 @@ def print_curve(name, model_cls, params, densities):
     )
     rho = np.array([r.density for r in results])
     velocity = np.array([r.mean_velocity for r in results])
-    reference = empirical_velocity_from_required_length(rho)
+    reference = empirical_mean_velocity_near_density(rho, half_width=0.075)
 
     print(f"\n{name}")
-    print("rho [1/m]   simulation v [m/s]   empirical ref [m/s]")
+    print("rho [1/m]   simulation v [m/s]   nearby empirical mean [m/s]")
     for r, v, ref in zip(rho, velocity, reference):
-        print(f"{r:8.3f}   {v:18.3f}   {ref:19.3f}")
-    print(f"RMSE vs empirical regression: {rmse_against_empirical(rho, velocity):.3f} m/s")
+        ref_text = "n/a" if np.isnan(ref) else f"{ref:.3f}"
+        print(f"{r:8.3f}   {v:18.3f}   {ref_text:>25}")
+    print(f"RMSE vs nearby empirical points: {rmse_against_empirical(rho, velocity):.3f} m/s")
 
 
 def main() -> None:

@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 
 from _common import add_common_args, resolve_steps, FIG_DIR
@@ -29,7 +28,7 @@ from pedestrian import (
     ModelParameters,
     HardBodyModel,
     fundamental_diagram,
-    load_empirical_reference,
+    load_empirical_points,
 )
 
 
@@ -47,14 +46,16 @@ def main() -> None:
     densities = np.linspace(0.2, 2.9, 25)
 
     fig, ax = plt.subplots(figsize=(7, 5))
-    empirical = load_empirical_reference()
-    ax.plot(
+    empirical = load_empirical_points()
+    ax.scatter(
         [p.density for p in empirical],
         [p.velocity for p in empirical],
-        "-",
-        color="black",
-        linewidth=1.5,
-        label="empirical regression",
+        marker="o",
+        facecolors="none",
+        edgecolors="black",
+        s=18,
+        linewidths=0.8,
+        label="empirical data",
     )
     for b in B_VALUES:
         print(f"hard-body model, b = {b} s")

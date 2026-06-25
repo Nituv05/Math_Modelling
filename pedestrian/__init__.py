@@ -19,11 +19,9 @@ from .simulation import run_single, RunResult, PAPER_RELAX_STEPS, PAPER_MEASURE_
 from .fundamental_diagram import fundamental_diagram, densities_to_counts
 from .empirical import (
     EmpiricalPoint,
-    EMPIRICAL_A,
-    EMPIRICAL_B,
-    EMPIRICAL_REFERENCE_CSV,
-    empirical_velocity_from_required_length,
-    load_empirical_reference,
+    EMPIRICAL_POINTS_CSV,
+    empirical_mean_velocity_near_density,
+    load_empirical_points,
     rmse_against_empirical,
 )
 
@@ -40,10 +38,8 @@ __all__ = [
     "fundamental_diagram",
     "densities_to_counts",
     "EmpiricalPoint",
-    "EMPIRICAL_A",
-    "EMPIRICAL_B",
-    "EMPIRICAL_REFERENCE_CSV",
-    "empirical_velocity_from_required_length",
-    "load_empirical_reference",
+    "EMPIRICAL_POINTS_CSV",
+    "empirical_mean_velocity_near_density",
+    "load_empirical_points",
     "rmse_against_empirical",
 ]

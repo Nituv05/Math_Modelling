@@ -17,8 +17,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pedestrian import (ModelParameters, HardBodyModel, RemoteActionModel,
                         front_gaps, initialise, run_single,
-                        empirical_velocity_from_required_length,
-                        load_empirical_reference, rmse_against_empirical)
+                        empirical_mean_velocity_near_density,
+                        load_empirical_points, rmse_against_empirical)
 
 
 def test_required_length():
@@ -29,16 +29,18 @@ def test_required_length():
     assert np.isclose(p.required_length(np.array([-5.0]))[0], 0.36)
 
 
-def test_empirical_reference_curve():
-    rho = np.array([1.0, 2.0])
-    expected = np.array([(1.0 - 0.36) / 1.06, (0.5 - 0.36) / 1.06])
-    assert np.allclose(empirical_velocity_from_required_length(rho), expected)
-    assert rmse_against_empirical(rho, expected) == 0.0
+def test_empirical_points():
+    points = load_empirical_points()
+    assert len(points) == 170
+    assert min(p.density for p in points) < 0.6
+    assert max(p.density for p in points) > 2.0
+    assert min(p.velocity for p in points) < 0.12
+    assert max(p.velocity for p in points) > 0.95
 
-    points = load_empirical_reference()
-    assert len(points) > 10
-    assert points[0].density < points[-1].density
-    assert points[0].velocity > points[-1].velocity
+    rho = np.array([0.9, 1.4])
+    expected = empirical_mean_velocity_near_density(rho)
+    assert not np.isnan(expected).any()
+    assert rmse_against_empirical(rho, expected) == 0.0
 
 
 def test_front_gaps_sum_to_L():
