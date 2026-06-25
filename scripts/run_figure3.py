@@ -11,8 +11,9 @@ the velocity gap from Fig. 2:
     rho ~= 1.16 1/m   below the gap, no strong density wave
     rho ~= 1.21 1/m   above the gap, density waves become visible
 
-Time is plotted downward, matching the paper.  One pedestrian trajectory is
-highlighted in black to make the individual motion easier to follow.
+Time is plotted downward, matching the paper.  All pedestrians are shown as
+filled black dots.  For rho > 1.2 m^-1 the nearly vertical stacks of dots
+are the density waves discussed in the caption.
 
 Caption:
 
@@ -29,7 +30,6 @@ Run::
 from __future__ import annotations
 
 import argparse
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -43,90 +43,87 @@ TARGET_DENSITIES = [
 ]
 
 
-def break_at_periodic_wrap(x: np.ndarray, L: float) -> np.ndarray:
-    """Insert NaNs where a trajectory wraps around the periodic boundary."""
-    x_plot = x.astype(float).copy()
-    wrapped = np.abs(np.diff(x_plot)) > (0.5 * L)
-    x_plot[np.where(wrapped)[0] + 1] = np.nan
-    return x_plot
-
-
-def run_with_highlight(n, L, params, relax_steps, measure_steps, seed, stride, highlight_id):
+def run_space_time(n, L, params, relax_steps, measure_steps, seed, stride):
     model = RemoteActionModel(n=n, L=L, params=params, seed=seed)
-    highlight_id = highlight_id % n
 
     for _ in range(relax_steps):
         model.step()
 
     traj = []
-    highlighted = []
     for k in range(measure_steps):
         model.step()
         if k % stride == 0:
             traj.append(model.x.copy())
-            highlight_idx = int(np.flatnonzero(model.ids == highlight_id)[0])
-            highlighted.append(model.x[highlight_idx])
-    return np.array(traj), np.array(highlighted), highlight_id
+    return np.array(traj)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     add_common_args(parser)
-    parser.add_argument("--highlight-ped", type=int, default=0,
-                        help="pedestrian index to highlight in black (default: 0)")
+    parser.set_defaults(seed=12)
+    parser.add_argument("--plot-seconds", type=float, default=6.0,
+                        help="time window shown after relaxation, in seconds (default: %(default)s)")
+    parser.add_argument("--plot-frames", type=int, default=45,
+                        help="number of sampled time rows in the plot (default: %(default)s)")
     args = parser.parse_args()
     relax, measure = resolve_steps(args)
 
-    # Record a coarse-grained trajectory; we don't need every 1ms frame.
-    stride = max(1, measure // 1500)
+    # Fig. 3 in the paper shows a short space-time window after relaxation,
+    # not the full 3e5 measurement interval used for the fundamental diagram.
+    # The paper notes that density waves near the gap depend on the
+    # distribution of individual velocities; seed=12 gives the same qualitative
+    # contrast as the published figure: rho=1.16 remains almost homogeneous,
+    # while rho=1.21 develops stopped density-wave stacks.
+    plot_steps = min(measure, max(1, int(round(args.plot_seconds / 0.001))))
+    stride = max(1, plot_steps // args.plot_frames)
     params = ModelParameters(a=0.36, b=0.0, e=0.07, f=2.0)
 
-    fig, axes = plt.subplots(1, len(TARGET_DENSITIES), figsize=(11, 5.4),
+    fig, axes = plt.subplots(len(TARGET_DENSITIES), 1, figsize=(3.1, 5.85),
                              sharex=True, sharey=True)
 
     for ax, (rho, panel_note) in zip(np.atleast_1d(axes), TARGET_DENSITIES):
         n = int(round(rho * args.L))
         actual_rho = n / args.L
         print(f"rho={actual_rho:.3f} 1/m  (N={n})")
-        traj, highlighted, highlight = run_with_highlight(
+        traj = run_space_time(
             n=n,
             L=args.L,
             params=params,
             relax_steps=relax,
-            measure_steps=measure,
+            measure_steps=plot_steps,
             seed=args.seed,
             stride=stride,
-            highlight_id=args.highlight_ped,
         )
-        # traj: shape (frames, N).  Plot position vs time, with time downward.
+        # traj: shape (frames, N).  Fig. 3 plots all positions as identical
+        # black dots; the visible vertical stacks are stopped density waves.
         frames = traj.shape[0]
         t = np.arange(frames) * stride * 0.001  # seconds
-        for ped in range(traj.shape[1]):
-            ax.plot(traj[:, ped], t, ",", color="0.45", alpha=0.45)
         ax.plot(
-            break_at_periodic_wrap(highlighted, args.L),
-            t,
-            "-",
+            traj.ravel(),
+            np.repeat(t, traj.shape[1]),
+            ".",
             color="black",
-            linewidth=1.0,
-            alpha=1.0,
-            label=f"highlighted pedestrian {highlight}",
+            markersize=2.0,
+            linestyle="None",
         )
-        ax.plot(highlighted, t, ".", color="black", markersize=1.8)
-        ax.set_title(rf"$\rho$ = {actual_rho:.2f} [1/m] ({panel_note})")
-        ax.set_xlabel("x  [m]")
+        ax.set_title(rf"$\rho$={actual_rho:.2f} [1/m]", fontsize=8)
+        ax.set_xlabel("x", fontsize=8)
         ax.set_xlim(0, args.L)
+        ax.set_xticks(np.arange(0, args.L, 2.0))
+        ax.set_yticks([])
+        ax.set_ylabel(r"$\leftarrow t$", rotation=90, fontsize=8)
+        ax.tick_params(labelsize=7, length=2.5)
+        ax.set_box_aspect(1.0)
         ax.invert_yaxis()
 
-    np.atleast_1d(axes)[0].set_ylabel("t  [s]  (downward)")
     caption = (
         "FIG. 3: Time-development of the positions for densities near\n"
         "the velocity-gap, see Figure 2. For $\\rho > 1.2\\,m^{-1}$ density waves\n"
         "are observable. Some individuals leave much larger than average gaps in front."
     )
-    fig.text(0.07, 0.025, caption, ha="left", va="bottom", fontsize=9)
-    fig.tight_layout(rect=(0, 0.15, 1, 1))
+    fig.text(0.04, 0.025, caption, ha="left", va="bottom", fontsize=6.8)
+    fig.tight_layout(rect=(0, 0.14, 1, 1), h_pad=1.4)
 
     out = f"{FIG_DIR}/figure3_density_waves.png"
     fig.savefig(out, dpi=200)
