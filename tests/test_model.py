@@ -123,3 +123,15 @@ def test_velocity_decreases_with_density():
     high = run_single(HardBodyModel, n=40, L=17.3, params=p,
                       relax_steps=3000, measure_steps=3000, seed=0)
     assert high.mean_velocity < low.mean_velocity
+
+
+def test_remote_action_b0_velocity_decreases_as_n_increases():
+    """For remote action with b=0, increasing N raises density and lowers speed."""
+    p = ModelParameters(a=0.36, b=0.0, e=0.07, f=2.0)
+    low = run_single(RemoteActionModel, n=20, L=17.3, params=p,
+                     relax_steps=2000, measure_steps=2000, seed=0)
+    high = run_single(RemoteActionModel, n=40, L=17.3, params=p,
+                      relax_steps=2000, measure_steps=2000, seed=0)
+
+    assert high.density > low.density
+    assert high.mean_velocity < low.mean_velocity
