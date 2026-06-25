@@ -85,11 +85,11 @@ Math_Modelling/
 ├── scripts/
 │   ├── run_figure1.py          # Fig. 1: hard bodies, b = 0 / 0.56 / 1.06
 │   ├── run_figure2.py          # Fig. 2: remote action vs. hard bodies
-│   ├── run_figure3.py          # Fig. 3: space-time density waves
+│   ├── run_figure3.py          # Fig. 3: space-time density waves, Eq. 6 b=0
 │   └── validate_reproduction.py # quantitative validation diagnostics
 ├── data/
 │   └── empirical_single_file_points.csv
-├── demo.py                     # quick no-plot demo
+├── demo.py                     # animated browser demo
 ├── tests/test_model.py         # invariants & qualitative checks (pytest)
 ├── figures/                    # generated PNGs
 ├── requirements.txt
@@ -106,7 +106,7 @@ pip install -r requirements.txt
 # Reproduce the figures (saved into figures/).
 python scripts/run_figure1.py --no-show          # fundamental diagram, Eq. 5
 python scripts/run_figure2.py --no-show          # remote action, Eq. 6
-python scripts/run_figure3.py --no-show          # density waves
+python scripts/run_figure3.py --no-show          # space-time density waves, Eq. 6 b=0
 
 # Step-count presets: --preset quick | default | paper
 #   quick   = 20k+20k   (fast smoke test)
@@ -114,8 +114,11 @@ python scripts/run_figure3.py --no-show          # density waves
 #   paper   = 300k+300k (the published runs; slow)
 python scripts/run_figure1.py --preset paper --no-show
 
-# Run the quick no-plot demo (needs numpy only)
+# Run an animated simulation demo (saved as figures/demo_simulation.html)
 python demo.py
+
+# Optional: print the old numeric smoke-test table
+python demo.py --table
 
 # Run quantitative diagnostics against nearby empirical data points,
 # finite-size checks, remote-action velocity gap, and force-floor sensitivity
@@ -152,6 +155,9 @@ for r in results:
 * The **remote action** (Eq. 6) has only a small influence when `b > 0`, but
   for `b = 0` it produces a **velocity gap and stop-and-go density waves**
   near `ρ ≈ 1.2 1/m` (Figs. 2 & 3).
+* **Fig. 3 is not an empirical-data plot.** It is a space-time plot of the
+  simulated positions for the `RemoteActionModel` with `b = 0`, comparing
+  densities just below and just above the Fig. 2 velocity gap.
 
 ---
 
@@ -166,6 +172,10 @@ for r in results:
 * The empirical overlay is a set of data points digitized from the Fig. 1 EPS
   source. The paper does not plot an empirical fitted curve in Figs. 1-3;
   Eq. 4 is the required-length relation used for the model parameter `d`.
+* Fig. 3 corresponds to the two space-time panels included from the paper
+  source as `fig3.eps` and `fig4.eps`: `rho ~= 1.16 1/m` and
+  `rho ~= 1.21 1/m`. It is meant to explain where the velocity gap in Fig. 2
+  comes from.
 * `RemoteActionModel` uses explicit Euler consistently: force is evaluated
   at the old state, velocity is advanced, and position is advanced with the
   old velocity.

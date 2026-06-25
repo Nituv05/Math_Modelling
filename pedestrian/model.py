@@ -143,6 +143,7 @@ class HardBodyModel:
         self.dt = dt
         self.rng = np.random.default_rng(seed)
         self.x, self.v, self.v0 = initialise(n, L, params, self.rng)
+        self.ids = np.arange(n)
 
     def step(self) -> None:
         p, dt, L = self.params, self.dt, self.L
@@ -173,6 +174,7 @@ class HardBodyModel:
         self.x = x_new[order]
         self.v = v_new[order]
         self.v0 = self.v0[order]
+        self.ids = self.ids[order]
 
 
 # --------------------------------------------------------------------------- #
@@ -200,6 +202,7 @@ class RemoteActionModel:
         self.dt = dt
         self.rng = np.random.default_rng(seed)
         self.x, self.v, self.v0 = initialise(n, L, params, self.rng)
+        self.ids = np.arange(n)
 
     def _force(self) -> np.ndarray:
         p = self.params
@@ -228,3 +231,4 @@ class RemoteActionModel:
         self.x = self.x[order]
         self.v = self.v[order]
         self.v0 = self.v0[order]
+        self.ids = self.ids[order]
