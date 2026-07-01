@@ -78,9 +78,7 @@ where $g_i$ is the gap to the pedestrian in front.
 For `RemoteActionModel`, the remote repulsion is:
 
 $$
-G_i =
-\frac{v_i^0 - v_i}{\tau}
-- e \left(\frac{1}{g_i - d_i}\right)^f,
+G_i = \frac{v_i^0 - v_i}{\tau} - e \left(\frac{1}{g_i - d_i}\right)^f.
 $$
 
 $$
@@ -127,14 +125,49 @@ Math_Modelling/
 Use Python 3.10+.
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
+```
+
+On Windows, activate the environment with:
+
+```powershell
+.venv\Scripts\activate
+python -m pip install -r requirements.txt
 ```
 
 The project is not packaged with `setup.py` or `pyproject.toml`; run commands
 from the repository root. The `.venv/` directory is local only and does not
 need to be submitted; recreate it with the commands above.
+
+## Quick Reproduction
+
+These commands are the shortest path for checking that the repository works
+from a clean copy:
+
+```bash
+pytest -q
+
+python scripts/run_figure1.py --preset quick --no-show
+python scripts/run_figure2.py --preset quick --no-show
+python scripts/run_figure3.py --preset quick --no-show
+
+python demo/demo.py --table
+```
+
+Expected outputs after the figure commands:
+
+```text
+figures/figure1_hardbody.png
+figures/figure2_remote.png
+figures/figure3_density_waves.png
+figures/figure3_density_waves.pdf
+```
+
+`--preset quick` is intended for fast verification. Use `--preset default` for
+cleaner curves and `--preset paper` for the expensive setting closest to the
+published simulation length.
 
 ## Main Commands
 
@@ -144,21 +177,12 @@ Run the tests:
 pytest -q
 ```
 
-Reproduce the paper figures:
+Reproduce the figure outputs with the default preset:
 
 ```bash
 python scripts/run_figure1.py --no-show
 python scripts/run_figure2.py --no-show
 python scripts/run_figure3.py --no-show
-```
-
-Generated outputs:
-
-```text
-figures/figure1_hardbody.png
-figures/figure2_remote.png
-figures/figure3_density_waves.png
-figures/figure3_density_waves.pdf
 ```
 
 The figure scripts share these step-count presets:
