@@ -3,9 +3,9 @@
 
 Run:
 
-    python3 demo.py
+    python3 demo/demo.py
 
-By default this writes ``figures/demo_simulation.html``: a self-contained
+By default this writes ``demo/demo_simulation.html``: a self-contained
 browser replay of several precomputed sensitivity cases.  The demo is a
 controlled replay, not a realtime parameter fitter; changing the selected case
 switches the entire simulated trajectory and velocity data.
@@ -17,7 +17,12 @@ import argparse
 import json
 from dataclasses import dataclass
 from pathlib import Path
+import sys
 import webbrowser
+
+DEMO_DIR = Path(__file__).resolve().parent
+ROOT = DEMO_DIR.parent
+sys.path.insert(0, str(ROOT))
 
 import numpy as np
 
@@ -32,9 +37,7 @@ from pedestrian import (
 )
 
 
-ROOT = Path(__file__).resolve().parent
-FIG_DIR = ROOT / "figures"
-DEFAULT_HTML = FIG_DIR / "demo_simulation.html"
+DEFAULT_HTML = DEMO_DIR / "demo_simulation.html"
 
 
 @dataclass(frozen=True)

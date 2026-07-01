@@ -1,181 +1,247 @@
-# Math Modelling Project — Basics of Modelling the Pedestrian Flow
+# Math Modelling Project - Basics of Modelling the Pedestrian Flow
 
-A Python reproduction and validation scaffold for
+This repository contains a Python reproduction scaffold for the single-file
+pedestrian-flow model from:
 
-> A. Seyfried, B. Steffen, T. Lippert,
-> **"Basics of Modelling the Pedestrian Flow"**,
-> *Physica A* **368** (2006) 232–238.
+> A. Seyfried, B. Steffen, T. Lippert,  
+> **"Basics of Modelling the Pedestrian Flow"**,  
+> *Physica A* **368** (2006) 232-238.  
 > arXiv: [physics/0506189](https://arxiv.org/abs/physics/0506189)
 
-The paper studies single-file (one-dimensional) pedestrian motion with a
-**modified social-force model** and asks which microscopic interaction
-reproduces the empirical **velocity–density relation** (fundamental
-diagram). It compares two interaction approaches and shows that a
-*velocity-dependent required length* `d = a + b·v` is the key ingredient.
+The code simulates pedestrians on a one-dimensional ring, reproduces the
+velocity-density relation ("fundamental diagram"), compares the paper's two
+interaction variants, and includes diagnostics plus appendix-style sensitivity
+experiments.
 
----
+## What Is Implemented
 
-## The model
+The package models single-file pedestrian motion with periodic boundary
+conditions. Pedestrian `i` reacts only to the pedestrian directly in front.
+Mass is set to `1`, so force and acceleration use the same numerical value.
 
-Pedestrians move on a ring of length `L` (periodic boundary conditions),
-ordered as `x₁ < x₂ < … < x_N`. Each pedestrian `i` only reacts to the
-person `i+1` directly in front. Masses are set to `mᵢ = 1`.
+The shared driving term is:
 
-**Equation of motion (Eq. 1–2)**
-
-```
-dxᵢ/dt = vᵢ
-dvᵢ/dt = Fᵢ = (vᵢ⁰ − vᵢ)/τ  +  (repulsion)
+```text
+dx_i/dt = v_i
+dv_i/dt = (v_i^0 - v_i) / tau + interaction
 ```
 
-**Required length (Eq. 4)** — personal space grows with speed:
+The required length is:
 
-```
-d = a + b·v        a = 0.36 m,   b ∈ {0, 0.56, 1.06} s
-```
-
-### 1. Hard bodies *without* remote action (Eq. 5) — `HardBodyModel`
-
-```
-Fᵢ = (vᵢ⁰ − vᵢ)/τ           if  gapᵢ > dᵢ
-     velocity → 0, no move   if  gapᵢ ≤ dᵢ   (hard collision)
+```text
+d_i = a + b * max(v_i, 0)
 ```
 
-Integrated with the special quasi-parallel update of Section II C
-(explicit Euler step `Δt = 0.001 s`, then reject moves that violate the
-required length and relax to a fixpoint).
+Default paper parameters are stored in `ModelParameters`:
 
-### 2. Hard bodies *with* remote action (Eq. 6) — `RemoteActionModel`
+| parameter | default | meaning |
+| --- | ---: | --- |
+| `a` | `0.36` m | required-length offset |
+| `b` | `0.56` s | velocity dependence of required length |
+| `tau` | `0.61` s | acceleration/relaxation time |
+| `v0_mean` | `1.24` m/s | mean intended speed |
+| `v0_sigma` | `0.05` m/s | intended-speed standard deviation |
+| `e` | `0.07` | remote-action strength |
+| `f` | `2.0` | remote-action exponent |
+| `clear_distance_floor` | `1e-6` m | numerical guard for Eq. 6 |
 
-```
-Gᵢ = (vᵢ⁰ − vᵢ)/τ − e·(1 / (gapᵢ − dᵢ))^f
-Fᵢ = Gᵢ              if vᵢ > 0
-Fᵢ = max(0, Gᵢ)      if vᵢ ≤ 0          e = 0.07 N,  f = 2
-```
+Two model classes are available:
 
-Integrated with explicit Euler, `Δt = 0.001 s`.
+- `HardBodyModel`: hard bodies without remote action, corresponding to Eq. 5.
+  Moves that violate the required length are rejected and relaxed iteratively.
+- `RemoteActionModel`: hard bodies with remote action, corresponding to Eq. 6.
+  A repulsive force is integrated with explicit Euler.
 
-### Parameters (Section III)
+## Repository Layout
 
-| symbol | value | meaning |
-|--------|-------|---------|
-| `a` | 0.36 m | required-length offset |
-| `b` | 0 / 0.56 / 1.06 s | velocity dependence of required length |
-| `τ` | 0.61 s | acceleration time constant |
-| `v⁰` | N(1.24, 0.05) m/s | intended speed (normal distribution) |
-| `e`, `f` | 0.07 N, 2 | remote-force strength / range |
-| `L` | 17.3 m | ring length (20, 50 m give the same results) |
-| `Δt` | 0.001 s | time step |
-| steps | 3·10⁵ + 3·10⁵ | relaxation + measurement |
-
-Initial condition: `t = 0`, all velocities zero, persons placed randomly
-with minimal distance `a`.
-
----
-
-## Project layout
-
-```
+```text
 Math_Modelling/
-├── pedestrian/                  # the model package
-│   ├── model.py                # HardBodyModel, RemoteActionModel, parameters
-│   ├── simulation.py           # run one simulation, measure mean velocity
-│   ├── fundamental_diagram.py  # sweep density -> v(ρ)
-│   └── empirical.py            # empirical data-point helpers
+├── pedestrian/
+│   ├── __init__.py
+│   ├── model.py                 # ModelParameters, HardBodyModel, RemoteActionModel
+│   ├── simulation.py            # run_single and RunResult
+│   ├── fundamental_diagram.py   # density sweeps
+│   └── empirical.py             # empirical CSV helpers and RMSE utilities
 ├── scripts/
-│   ├── run_figure1.py          # Fig. 1: hard bodies, b = 0 / 0.56 / 1.06
-│   ├── run_figure2.py          # Fig. 2: remote action vs. hard bodies
-│   ├── run_figure3.py          # Fig. 3: space-time density waves, Eq. 6 b=0
-│   └── validate_reproduction.py # quantitative validation diagnostics
+│   ├── _common.py
+│   ├── run_figure1.py           # Fig. 1: hard-body fundamental diagram
+│   ├── run_figure2.py           # Fig. 2: remote action comparison
+│   ├── run_figure3.py           # Fig. 3: space-time density waves
+│   ├── validate_reproduction.py # quantitative diagnostics
+│   └── run_appendix_experiments.py
 ├── data/
+│   ├── README.md
 │   └── empirical_single_file_points.csv
-├── demo.py                     # animated browser demo
-├── tests/test_model.py         # invariants & qualitative checks (pytest)
-├── figures/                    # generated PNGs
+├── tests/
+│   └── test_model.py
+├── demo/
+│   ├── demo.py                  # self-contained HTML replay generator
+│   └── demo_simulation.html     # generated demo replay
+├── appendix_experiment_results/ # generated/checked-in appendix outputs
+├── figures/                     # generated paper figure outputs
 ├── requirements.txt
 └── README.md
 ```
 
----
+## Setup
 
-## Usage
+Use Python 3.10+.
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-
-# Reproduce the figures (saved into figures/).
-python scripts/run_figure1.py --no-show          # fundamental diagram, Eq. 5
-python scripts/run_figure2.py --no-show          # remote action, Eq. 6
-python scripts/run_figure3.py --no-show          # space-time density waves, Eq. 6 b=0
-
-# Step-count presets: --preset quick | default | paper
-#   quick   = 20k+20k   (fast smoke test)
-#   default = 60k+60k   (reproduces the shape)
-#   paper   = 300k+300k (the published runs; slow)
-python scripts/run_figure1.py --preset paper --no-show
-
-# Run an animated simulation demo (saved as figures/demo_simulation.html)
-python demo.py
-
-# Optional: print the old numeric smoke-test table
-python demo.py --table
-
-# Run quantitative diagnostics against nearby empirical data points,
-# finite-size checks, remote-action velocity gap, and force-floor sensitivity
-python scripts/validate_reproduction.py --preset quick
-python scripts/validate_reproduction.py --preset paper --json
 ```
 
-Run the test suite:
+The project is not packaged with `setup.py` or `pyproject.toml`; run commands
+from the repository root. The `.venv/` directory is local only and does not
+need to be submitted; recreate it with the commands above.
+
+## Main Commands
+
+Run the tests:
 
 ```bash
 pytest -q
 ```
 
-### Use the model directly
+Reproduce the paper figures:
+
+```bash
+python scripts/run_figure1.py --no-show
+python scripts/run_figure2.py --no-show
+python scripts/run_figure3.py --no-show
+```
+
+Generated outputs:
+
+```text
+figures/figure1_hardbody.png
+figures/figure2_remote.png
+figures/figure3_density_waves.png
+figures/figure3_density_waves.pdf
+```
+
+The figure scripts share these step-count presets:
+
+```text
+quick   = 20_000 relaxation + 20_000 measurement steps
+default = 60_000 relaxation + 60_000 measurement steps
+paper   = 300_000 relaxation + 300_000 measurement steps
+```
+
+Example:
+
+```bash
+python scripts/run_figure1.py --preset paper --no-show
+```
+
+Run quantitative diagnostics:
+
+```bash
+python scripts/validate_reproduction.py --preset quick
+python scripts/validate_reproduction.py --preset paper --json
+```
+
+Run the appendix sensitivity experiments:
+
+```bash
+python scripts/run_appendix_experiments.py --preset quick
+python scripts/run_appendix_experiments.py --preset quick --output-dir appendix_experiment_results
+```
+
+This writes CSV, JSON, and PNG summaries for:
+
+- `A_b_sensitivity`
+- `B_a_sensitivity`
+- `C_tau_sensitivity`
+- `C_tau_transient`
+- `D_N_rho`
+- `E_finite_size`
+
+## HTML Demo
+
+Generate a self-contained browser replay:
+
+```bash
+python demo/demo.py
+```
+
+By default this writes:
+
+```text
+demo/demo_simulation.html
+```
+
+Open it automatically after generation:
+
+```bash
+python demo/demo.py --show
+```
+
+Print the older numeric smoke-test table instead of writing HTML:
+
+```bash
+python demo/demo.py --table
+```
+
+Useful demo overrides:
+
+```bash
+python demo/demo.py --frames 120 --relax-steps 4000 --fd-relax-steps 1500 --fd-measure-steps 1500
+python demo/demo.py --output /tmp/demo_simulation.html
+```
+
+## Use As A Library
 
 ```python
 from pedestrian import ModelParameters, HardBodyModel, fundamental_diagram
 
 params = ModelParameters(a=0.36, b=0.56)
-results = fundamental_diagram(HardBodyModel, params, L=17.3,
-                             densities=[0.5, 1.0, 1.5, 2.0, 2.5])
-for r in results:
-    print(r.density, r.mean_velocity)
+results = fundamental_diagram(
+    HardBodyModel,
+    params,
+    L=17.3,
+    densities=[0.5, 1.0, 1.5, 2.0, 2.5],
+)
+
+for result in results:
+    print(result.density, result.mean_velocity, result.std_velocity)
 ```
 
----
+Run one simulation directly:
 
-## Key result reproduced
+```python
+from pedestrian import ModelParameters, RemoteActionModel, run_single
 
-* With a **velocity-independent** required length (`b = 0`) the model gives a
-  fundamental diagram with the *wrong* curvature.
-* A **velocity-dependent** required length with **`b = 0.56 s`** reproduces
-  the empirical fundamental diagram well (Fig. 1).
-* The **remote action** (Eq. 6) has only a small influence when `b > 0`, but
-  for `b = 0` it produces a **velocity gap and stop-and-go density waves**
-  near `ρ ≈ 1.2 1/m` (Figs. 2 & 3).
-* **Fig. 3 is not an empirical-data plot.** It is a space-time plot of the
-  simulated positions for the `RemoteActionModel` with `b = 0`, comparing
-  densities just below and just above the Fig. 2 velocity gap.
+result = run_single(
+    RemoteActionModel,
+    n=21,
+    L=17.3,
+    params=ModelParameters(a=0.36, b=0.0, e=0.07, f=2.0),
+    relax_steps=20_000,
+    measure_steps=20_000,
+    seed=0,
+)
 
----
+print(result)
+```
 
-## Notes on the reproduction
+## Data
 
-* The published figures use 3·10⁵ + 3·10⁵ steps at `Δt = 0.001 s` for every
-  density point. The scripts default to a lighter preset that already shows
-  the correct shape; pass `--preset paper` for the full runs.
-* The hard-body update (Eq. 5) uses iterative relaxation of the rejected
-  moves, which is the "approximation to the exact parallel update" the
-  authors describe in Section II C.
-* The empirical overlay is a set of data points digitized from the Fig. 1 EPS
-  source. The paper does not plot an empirical fitted curve in Figs. 1-3;
-  Eq. 4 is the required-length relation used for the model parameter `d`.
-* Fig. 3 corresponds to the two space-time panels included from the paper
-  source as `fig3.eps` and `fig4.eps`: `rho ~= 1.16 1/m` and
-  `rho ~= 1.21 1/m`. It is meant to explain where the velocity gap in Fig. 2
-  comes from.
-* `RemoteActionModel` uses explicit Euler consistently: force is evaluated
-  at the old state, velocity is advanced, and position is advanced with the
-  old velocity.
+`data/empirical_single_file_points.csv` stores 170 empirical marker positions
+digitized from the paper's Fig. 1 EPS source. These are plotted data points,
+not a fitted empirical curve. See `data/README.md` for the coordinate mapping
+used during digitization.
+
+## Reproduction Notes
+
+- `b = 0.56 s` in `HardBodyModel` is the main setting that reproduces the
+  empirical fundamental diagram shape.
+- `b = 0` with `RemoteActionModel` shows the velocity gap and stop-and-go
+  density waves near `rho ~= 1.2 1/m`.
+- `run_figure3.py` produces a space-time position plot, not a
+  velocity-density diagram.
+- The expensive paper preset uses `300_000 + 300_000` integration steps per
+  density point with `dt = 0.001 s`.
+- Figure PNGs are generated artifacts; `.gitignore` ignores `figures/*.png`.
