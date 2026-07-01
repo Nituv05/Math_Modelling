@@ -162,7 +162,6 @@ Expected outputs after the figure commands:
 figures/figure1_hardbody.png
 figures/figure2_remote.png
 figures/figure3_density_waves.png
-figures/figure3_density_waves.pdf
 ```
 
 `--preset quick` is intended for fast verification. Use `--preset default` for
