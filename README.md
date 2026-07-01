@@ -16,21 +16,32 @@ experiments.
 ## What Is Implemented
 
 The package models single-file pedestrian motion with periodic boundary
-conditions. Pedestrian `i` reacts only to the pedestrian directly in front.
-Mass is set to `1`, so force and acceleration use the same numerical value.
+conditions. For a ring of length $L$ with $N$ pedestrians, the density is
 
-The shared driving term is:
+$$
+\rho = \frac{N}{L}.
+$$
 
-```text
-dx_i/dt = v_i
-dv_i/dt = (v_i^0 - v_i) / tau + interaction
-```
+Pedestrian $i$ reacts only to the pedestrian directly in front. Mass is set to
+$m_i = 1$, so force and acceleration use the same numerical value.
 
-The required length is:
+The shared equation of motion is:
 
-```text
-d_i = a + b * max(v_i, 0)
-```
+$$
+\frac{dx_i}{dt} = v_i,
+$$
+
+$$
+\frac{dv_i}{dt}
+= F_i
+= \frac{v_i^0 - v_i}{\tau} + F_i^{\mathrm{int}}.
+$$
+
+The velocity-dependent required length is:
+
+$$
+d_i = a + b \max(v_i, 0).
+$$
 
 Default paper parameters are stored in `ModelParameters`:
 
@@ -51,6 +62,34 @@ Two model classes are available:
   Moves that violate the required length are rejected and relaxed iteratively.
 - `RemoteActionModel`: hard bodies with remote action, corresponding to Eq. 6.
   A repulsive force is integrated with explicit Euler.
+
+For `HardBodyModel`, the interaction is implemented as a hard constraint:
+
+$$
+F_i =
+\begin{cases}
+\dfrac{v_i^0 - v_i}{\tau}, & \text{if } g_i > d_i, \\
+0 \text{ and rejected move}, & \text{if } g_i \le d_i,
+\end{cases}
+$$
+
+where $g_i$ is the gap to the pedestrian in front.
+
+For `RemoteActionModel`, the remote repulsion is:
+
+$$
+G_i =
+\frac{v_i^0 - v_i}{\tau}
+- e \left(\frac{1}{g_i - d_i}\right)^f,
+$$
+
+$$
+F_i =
+\begin{cases}
+G_i, & \text{if } v_i > 0, \\
+\max(0, G_i), & \text{if } v_i \le 0.
+\end{cases}
+$$
 
 ## Repository Layout
 
@@ -236,12 +275,12 @@ used during digitization.
 
 ## Reproduction Notes
 
-- `b = 0.56 s` in `HardBodyModel` is the main setting that reproduces the
+- $b = 0.56\,\mathrm{s}$ in `HardBodyModel` is the main setting that reproduces the
   empirical fundamental diagram shape.
-- `b = 0` with `RemoteActionModel` shows the velocity gap and stop-and-go
-  density waves near `rho ~= 1.2 1/m`.
+- $b = 0$ with `RemoteActionModel` shows the velocity gap and stop-and-go
+  density waves near $\rho \approx 1.2\,\mathrm{m}^{-1}$.
 - `run_figure3.py` produces a space-time position plot, not a
   velocity-density diagram.
-- The expensive paper preset uses `300_000 + 300_000` integration steps per
-  density point with `dt = 0.001 s`.
+- The expensive paper preset uses $300{,}000 + 300{,}000$ integration steps
+  per density point with $\Delta t = 0.001\,\mathrm{s}$.
 - Figure PNGs are generated artifacts; `.gitignore` ignores `figures/*.png`.
